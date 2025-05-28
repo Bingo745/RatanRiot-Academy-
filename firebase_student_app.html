@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Firebase Student App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .section { margin-bottom: 30px; }
+    #chat { display: none; margin-top: 10px; border: 1px solid #ccc; padding: 10px; }
+    #leaderboardList li { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <div class="section">
+    <h2>Sign Up / Login</h2>
+    <input type="email" id="email" placeholder="Email"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <button onclick="signUp()">Sign Up</button>
+    <button onclick="loginUser()">Login</button>
+  </div>
+
+  <div class="section">
+    <h2>Leaderboard</h2>
+    <ul id="leaderboardList"></ul>
+  </div>
+
+  <div class="section">
+    <h2>Chat</h2>
+    <button onclick="requestChatAccess()">Request Chat Access</button>
+    <button onclick="grantAccess()">Grant Chat Access (Admin)</button>
+    <div id="chat">
+      <div id="messages" style="height:150px; overflow-y:auto; border:1px solid #ccc; margin-bottom:10px;"></div>
+      <input type="text" id="chatBox" placeholder="Type a message...">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getDatabase, ref, set, get, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "your-project-id.firebaseapp.com",
+      databaseURL: "https://your-project-id.firebaseio.com",
+      projectId: "your-project-id",
+      storageBucket: "your-project-id.appspot.com",
+      messagingSenderId: "your-messaging-id",
+      appId: "your-app-id"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const database = getDatabase(app);
+
+    window.signUp = function () {
+      let email = document.getElementById("email").value;
+      let password = document.getElementById("password").value;
+
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          alert("Sign Up Successful!");
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    };
+
+    window.loginUser = function () {
+      let email = document.getElementById("email").value;
+      let password = document.getElementById("password").value;
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          alert("Login Successful!");
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    };
+
+    let students = [
+      { name: "Alice", points: 120 },
+      { name: "Bob", points: 90 },
+      { name: "Charlie", points: 150 }
+    ];
+
+    function updateLeaderboard() {
+      let leaderboard = document.getElementById("leaderboardList");
+      leaderboard.innerHTML = "";
+
+      students.sort((a, b) => b.points - a.points);
+
+      students.forEach(student => {
+        let li = document.createElement("li");
+        li.innerText = `${student.name} - ${student.points} Points`;
+        leaderboard.appendChild(li);
+      });
+    }
+
+    window.onload = updateLeaderboard;
+
+    let chatAccess = false;
+
+    window.requestChatAccess = function () {
+      alert("Your request has been sent to the admin.");
+    };
+
+    window.grantAccess = function () {
+      chatAccess = true;
+      document.getElementById("chat").style.display = "block";
+    };
+
+    window.sendMessage = function () {
+      if (!chatAccess) {
+        alert("Access denied. Wait for admin approval.");
+        return;
+      }
+
+      let msg = document.getElementById("chatBox").value;
+      let messagesDiv = document.getElementById("messages");
+
+      let p = document.createElement("p");
+      p.innerText = msg;
+      messagesDiv.appendChild(p);
+
+      document.getElementById("chatBox").value = "";
+    };
+  </script>
+</body>
+</html>
