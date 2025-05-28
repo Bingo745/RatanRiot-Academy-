@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student App</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .section { margin-bottom: 30px; }
+    #chat { display: none; border: 1px solid #ccc; padding: 10px; }
+    #leaderboardList li { margin: 5px 0; }
+  </style>
+  <!-- Firebase App (modular SDK) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getDatabase, ref, set, get, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "YOUR_FIREBASE_API_KEY",
+      authDomain: "your-project-id.firebaseapp.com",
+      databaseURL: "https://your-project-id.firebaseio.com",
+      projectId: "your-project-id",
+      storageBucket: "your-project-id.appspot.com",
+      messagingSenderId: "your-messaging-id",
+      appId: "your-app-id"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const database = getDatabase(app);
+
+    // Authentication
+    window.signUp = function () {
+      let email = document.getElementById("email").value;
+      let password = document.getElementById("password").value;
+
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          alert("Sign Up Successful!");
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    };
+
+    window.loginUser = function () {
+      let email = document.getElementById("email").value;
+      let password = document.getElementById("password").value;
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          alert("Login Successful!");
+          checkChatAccess(userCredential.user.uid);
+        })
+        .catch((error) => {
+          alert(error.message);
+        });
+    };
+
+    // Leaderboard
+    let students = [];
+
+    function fetchLeaderboard() {
+      const leaderboardRef = ref(database, 'leaderboard/');
+      get(leaderboardRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          students = Object.values(snapshot.val());
+          updateLeaderboard();
+        }
+      }).catch((error) => {
+        console.error("Error fetching leaderboard:", error);
+      });
+    }
+
+    function updateLeaderboard() {
+      let leaderboard = document.getElementById("leaderboardList");
+      leaderboard.innerHTML = "";
+
+      students.sort((a, b) => b.points - a.points);
+
+      students.forEach(student => {
+        let li = document.createElement("li");
+        li.innerText = `${student.name} - ${student.points} Points`;
+        leaderboard.appendChild(li);
+      });
+    }
+
+    // Chat System
+    let chatAccess = false;
+
+    function checkChatAccess(uid) {
+      const accessRef = ref(database, `chatAccess/${uid}`);
+      get(accessRef).then((snapshot) => {
+        chatAccess = snapshot.val() === true;
+        if (chatAccess) {
+          document.getElementById("chat").style.display = "block";
+          displayChatMessages();
+        }
+      });
+    }
+
+    window.sendMessage = function () {
+      if (!chatAccess) {
+        alert("Access denied. Wait for admin approval.");
+        return;
+      }
+
+      let msg = document.getElementById("chatBox").value;
+      const chatRef = push(ref(database, 'chat/'));
+      set(chatRef, { message: msg, timestamp: Date.now() });
+
+      document.getElementById("chatBox").value = "";
+    };
+
+    function displayChatMessages() {
+      const messagesRef = ref(database, 'chat/');
+      get(messagesRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const messagesDiv = document.getElementById("messages");
+          messagesDiv.innerHTML = "";
+          Object.values(snapshot.val()).forEach(chat => {
+            let p = document.createElement("p");
+            p.innerText = chat.message;
+            messagesDiv.appendChild(p);
+          });
+        }
+      });
+    }
+
+    window.requestChatAccess = function () {
+      alert("Your request has been sent to the admin.");
+    };
+
+    window.onload = fetchLeaderboard;
+  </script>
+</head>
+<body>
+  <div class="section">
+    <h2>Login / Sign Up</h2>
+    <input type="email" id="email" placeholder="Email" /><br/>
+    <input type="password" id="password" placeholder="Password" /><br/>
+    <button onclick="signUp()">Sign Up</button>
+    <button onclick="loginUser()">Login</button>
+  </div>
+
+  <div class="section">
+    <h2>Leaderboard</h2>
+    <ul id="leaderboardList"></ul>
+  </div>
+
+  <div class="section">
+    <h2>Chat</h2>
+    <button onclick="requestChatAccess()">Request Access</button>
+    <div id="chat">
+      <div id="messages" style="height: 150px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
+      <input type="text" id="chatBox" placeholder="Enter message" />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+</body>
+</html>
